@@ -1,0 +1,50 @@
+{
+  "name": "solana-agent-kit-plugin-robinhood-chain",
+  "version": "0.1.0",
+  "description": "Robinhood Chain (chain id 4663) toolset for Solana Agent Kit — EVM-native KOL trades, token discovery & bundle detection, deployer reputation, and the DEX trade tape, packaged as a SAK plugin for agent builders",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "node ../gen-version.mjs",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "preflight": "bash ../../scripts/preflight-publish.sh",
+    "prepublishOnly": "npm run preflight && npm run build"
+  },
+  "keywords": [
+    "robinhood-chain",
+    "robinhood",
+    "rhc",
+    "chain-4663",
+    "solana-agent-kit",
+    "agent-kit",
+    "sendaifun",
+    "ai-agent",
+    "evm",
+    "kol",
+    "kol-tracker",
+    "deployer-hunter",
+    "smart-money",
+    "memecoin",
+    "trading",
+    "madeonsol"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/madeonsol/solana-agent-kit-plugin-robinhood-chain.git"
+  },
+  "homepage": "https://madeonsol.com/robinhood",
+  "peerDependencies": {
+    "solana-agent-kit": ">=2.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
+}
