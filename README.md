@@ -5,13 +5,15 @@
 [![SAK](https://img.shields.io/badge/Solana%20Agent%20Kit-plugin-blueviolet?style=flat-square)](https://github.com/sendaifun/solana-agent-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-> 🤖 **[Robinhood Chain API](https://madeonsol.com/robinhood)** · 📚 **[API docs](https://madeonsol.com/api-docs)** · 💰 **[Free API key](https://madeonsol.com/developer)** · 🤖 **[Solana Agent Kit](https://github.com/sendaifun/solana-agent-kit)**
+> 🤖 **[Robinhood Chain API](https://madeonsol.com/robinhood)** · 📚 **[API docs](https://madeonsol.com/api-docs)** · 💰 **[Free API key](https://madeonsol.com/pricing)** · 🤖 **[Solana Agent Kit](https://github.com/sendaifun/solana-agent-kit)**
 
 **Robinhood Chain toolset for [Solana Agent Kit](https://github.com/sendaifun/solana-agent-kit).** EVM-native on-chain trading intelligence for **Robinhood Chain (chain id 4663)** — live KOL trades, token discovery, launch-bundle detection, buyer-quality scoring, deployer reputation, the DEX trade tape, and smart-money wallet rankings from [MadeOnSol](https://madeonsol.com).
 
 > **Honest framing:** "Solana Agent Kit" is SVM-branded, and the intelligence in this package is **EVM/Robinhood Chain**, not Solana. This is a Robinhood Chain toolset packaged in the SAK plugin shape so agent builders already on Solana Agent Kit can add RHC coverage without adopting a new framework. Every field is EVM-native — `token_address` (lowercase `0x`), `eth_amount`, `tx_hash`, `block_number`, `net_flow_eth`. If you want a native RHC client, see the [`robinhood-chain-sdk`](https://www.npmjs.com/package/robinhood-chain-sdk) / [ElizaOS](https://www.npmjs.com/package/@madeonsol/plugin-robinhood-chain) packages below.
 
-> Robinhood Chain intelligence, EVM-native: track Solana KOLs' verified RHC wallets (recovered by tracing their Solana→EVM bridge deposits — a dataset unique to MadeOnSol), rank 40k+ RHC deployers by graduation/runner rate, detect same-block launch bundles and score early-buyer cohorts, and read the Uniswap v2/v3/v4 trade tape with the real trader EOA. **Same `msk_` API key, same base URL, bundled into every tier at no extra cost.** Get a free key at [madeonsol.com/developer](https://madeonsol.com/developer).
+> Robinhood Chain intelligence, EVM-native: track Solana KOLs' verified RHC wallets (recovered by tracing their Solana→EVM bridge deposits — a dataset unique to MadeOnSol), rank 40k+ RHC deployers by graduation/runner rate, detect same-block launch bundles and score early-buyer cohorts, and read the Uniswap v2/v3/v4 trade tape with the real trader EOA. **Same `msk_` API key, same base URL, bundled into every tier at no extra cost.** Get a free key at [madeonsol.com/pricing](https://madeonsol.com/pricing).
+
+New customers get a **5-day free trial** of Pro or Ultra when you pay by card — full access, nothing charged during the trial, cancel anytime. Start at [madeonsol.com/pricing](https://madeonsol.com/pricing).
 
 ## Quick start (10 seconds)
 
@@ -23,7 +25,7 @@ npm install solana-agent-kit-plugin-robinhood-chain
 import { SolanaAgentKit } from "solana-agent-kit";
 import RobinhoodChainPlugin from "solana-agent-kit-plugin-robinhood-chain";
 
-const agent = new SolanaAgentKit(privateKey, rpcUrl, { ROBINHOOD_CHAIN_API_KEY: "msk_..." }); // free key at https://madeonsol.com/developer
+const agent = new SolanaAgentKit(privateKey, rpcUrl, { ROBINHOOD_CHAIN_API_KEY: "msk_..." }); // free key at https://madeonsol.com/pricing
 agent.use(RobinhoodChainPlugin);
 
 const feed = await agent.methods.kolFeed(agent, { limit: 5, action: "buy" });
@@ -35,7 +37,7 @@ Robinhood Chain is **key-mode only** — a single MadeOnSol API key (`msk_`, Bea
 
 | Config key | Notes |
 |---|---|
-| `ROBINHOOD_CHAIN_API_KEY` | Your `msk_` key. [Get a free one](https://madeonsol.com/developer) — the same key already covers the Solana API. |
+| `ROBINHOOD_CHAIN_API_KEY` | Your `msk_` key. [Get a free one](https://madeonsol.com/pricing) — the same key already covers the Solana API. |
 | `MADEONSOL_API_KEY` | Fallback — used if `ROBINHOOD_CHAIN_API_KEY` is unset. |
 
 ## Tools & actions
@@ -66,7 +68,7 @@ import { SolanaAgentKit } from "solana-agent-kit";
 import RobinhoodChainPlugin from "solana-agent-kit-plugin-robinhood-chain";
 
 const agent = new SolanaAgentKit(privateKey, rpcUrl, {
-  ROBINHOOD_CHAIN_API_KEY: "msk_your_api_key_here", // free at madeonsol.com/developer
+  ROBINHOOD_CHAIN_API_KEY: "msk_your_api_key_here", // free at madeonsol.com/pricing
 });
 agent.use(RobinhoodChainPlugin);
 
@@ -117,7 +119,7 @@ Robinhood Chain is an Arbitrum Orbit L2 (chain id 4663). Two things follow, and 
 | PRO | €43/mo (€430/yr) ≈ $49 | 10,000 |
 | ULTRA | €131/mo (€1310/yr) ≈ $149 | 100,000 |
 
-Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tools work with any valid key; `trades`, `tokens`, `tokenCandles`, `tokenKolConsensus`, and `alphaWallets` require PRO+. ULTRA unlocks the deepest fields (full bundle cohort with wallet identity, KOL-consensus `buyers`/`exited` lists). Get a key at [madeonsol.com/developer](https://madeonsol.com/developer) · pricing at [madeonsol.com/pricing](https://madeonsol.com/pricing).
+Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tools work with any valid key; `trades`, `tokens`, `tokenCandles`, `tokenKolConsensus`, and `alphaWallets` require PRO+. ULTRA unlocks the deepest fields (full bundle cohort with wallet identity, KOL-consensus `buyers`/`exited` lists). Get a key at [madeonsol.com/pricing](https://madeonsol.com/pricing) · pricing at [madeonsol.com/pricing](https://madeonsol.com/pricing).
 
 ## Also Available
 
@@ -133,7 +135,7 @@ Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tool
 
 - **Robinhood Chain product** → https://madeonsol.com/robinhood
 - **API docs** → https://madeonsol.com/api-docs
-- **Free API key** → https://madeonsol.com/developer
+- **Free API key** → https://madeonsol.com/pricing
 - **Pricing** → https://madeonsol.com/pricing
 
 ## License
