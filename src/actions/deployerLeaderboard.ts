@@ -5,7 +5,7 @@ export const deployerLeaderboardAction = {
   name: "RHC_DEPLOYER_LEADERBOARD_ACTION",
   similes: ["robinhood chain deployer leaderboard", "rhc top deployers", "best deployers on robinhood chain", "rhc deployer reputation ranking"],
   description:
-    "Get the Robinhood Chain deployer reputation leaderboard. Most RHC launchpads are direct-to-DEX, so graduation is a market-cap milestone: graduation_rate = share of a deployer's tokens that hit $40K+ peak MC; runner_rate = share that hit $100K+. tier is elite/good/neutral/spammer. Sortable and filterable by tier/min_tokens. BASIC+.",
+    "Get the Robinhood Chain deployer reputation leaderboard. Most RHC launchpads are direct-to-DEX, so graduation is a market-cap milestone: graduation_rate = share of a deployer's tokens that hit $40K+ peak MC; runner_rate = share that hit $100K+. tier is elite/good/neutral/spammer — elite and good are earned on runner_rate ($100K) and require deploy history; graduation_rate is still returned but no longer sets the tier (the $40K bar proved farmable). Sortable and filterable by tier/min_tokens. BASIC+.",
   examples: [
     [{ input: { sort: "graduation_rate", limit: 20 }, output: { status: "success" }, explanation: "Top 20 RHC deployers by graduation rate" }],
   ],

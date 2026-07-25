@@ -10,7 +10,7 @@
  *
  * Auth is a single MadeOnSol API key (`msk_`, Bearer) — the SAME key that covers
  * the Solana API, bundled into every tier at no extra cost. Get a free key at
- * https://madeonsol.com/developer. The x402 pay-per-call rail is Solana-native
+ * https://madeonsol.com/pricing. The x402 pay-per-call rail is live on Robinhood Chain too
  * and is NOT available on Robinhood Chain — key auth only.
  */
 
@@ -59,32 +59,42 @@ export function initAuth(agent: Agent): void {
     _authHeaders = {};
     console.warn(
       "\n[robinhood-chain] No API key configured — every Robinhood Chain call will fail.\n" +
-        "  → Get a free `msk_` key (covers Robinhood Chain at no extra cost) at https://madeonsol.com/developer\n" +
+        "  → Get a free `msk_` key (covers Robinhood Chain at no extra cost) at https://madeonsol.com/pricing\n" +
         "  → Set ROBINHOOD_CHAIN_API_KEY (or MADEONSOL_API_KEY) in the agent config.\n",
     );
   }
 }
 
-/** GET against `/api/v1{path}` with Bearer auth. `path` starts with `/rhc/...`. */
+/**
+ * Request against `/api/v1{path}` with Bearer auth. `path` starts with `/rhc/...`.
+ *
+ * GET sends `params` as the query string; POST (the two batch routes) sends the
+ * SAME object as a JSON body, so a tool signature reads identically either way.
+ */
 async function restQuery(
   agent: Agent,
   method: string,
   path: string,
-  params?: Record<string, string | number | boolean | undefined>,
+  params?: Record<string, string | number | boolean | string[] | undefined>,
 ): Promise<unknown> {
   initAuth(agent);
   if (!_authHeaders || !_authHeaders.Authorization) {
     throw new Error(
-      "MadeOnSol API key required for Robinhood Chain. Get a free `msk_` key at https://madeonsol.com/developer",
+      "MadeOnSol API key required for Robinhood Chain. Get a free `msk_` key at https://madeonsol.com/pricing",
     );
   }
   const url = new URL(`/api/v1${path}`, BASE_URL);
-  if (params) {
+  const isWrite = method !== "GET";
+  if (params && !isWrite) {
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined) url.searchParams.set(k, String(v));
     }
   }
-  const res = await fetch(url.toString(), { method, headers: _authHeaders });
+  const res = await fetch(url.toString(), {
+    method,
+    headers: isWrite ? { ..._authHeaders, "Content-Type": "application/json" } : _authHeaders,
+    ...(isWrite ? { body: JSON.stringify(params ?? {}) } : {}),
+  });
   captureRateLimit(res);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -116,6 +126,46 @@ export async function kolHotTokens(agent: Agent, params: { window?: "5m" | "15m"
 /** Single KOL profile by EVM wallet (BASIC+). GET /rhc/kol/{wallet} */
 export async function kolProfile(agent: Agent, params: { wallet: string }) {
   return restQuery(agent, "GET", `/rhc/kol/${encodeURIComponent(params.wallet)}`);
+}
+
+/**
+ * Tokens bought by min_kols+ DISTINCT KOLs in the window — the coordination signal,
+ * with net ETH, accumulating/distributing, exited vs holding, and the per-KOL
+ * breakdown (BASIC+). GET /rhc/kol/coordination
+ */
+export async function kolCoordination(
+  agent: Agent,
+  params: {
+    period?: "1h" | "6h" | "24h" | "7d";
+    min_kols?: number;
+    limit?: number;
+    /** MC at the FIRST KOL buy — tokens with unknown MC are dropped when a band is set. */
+    min_mc_usd?: number;
+    max_mc_usd?: number;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/kol/coordination", params);
+}
+
+/**
+ * The GLOBALLY earliest buy by ANY tracked KOL per token — the discovery signal
+ * (BASIC+; limit clamped to 20 below PRO, first_kol.evm_address ULTRA-only).
+ * GET /rhc/kol/first-touches
+ */
+export async function kolFirstTouches(
+  agent: Agent,
+  params: {
+    limit?: number;
+    since?: string;
+    before?: string;
+    min_eth?: number;
+    token_age_max_min?: number;
+    launchpad?: string;
+    min_mc_usd?: number;
+    max_mc_usd?: number;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/kol/first-touches", params);
 }
 
 // ── Trades ──
@@ -180,9 +230,34 @@ export async function tokenBundle(agent: Agent, params: { address: string }) {
   return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(params.address)}/bundle`);
 }
 
+/**
+ * Up to 50 RHC tokens in ONE call — metadata, price/MC/FDV/liquidity, peak MC and
+ * deployer reputation. Set-based server-side (3 queries total), not a fan-out.
+ * Unknown addresses echo back as found:false so the array stays positional (BASIC+).
+ * POST /rhc/token/batch
+ */
+export async function tokenBatch(agent: Agent, params: { addresses: string[] }) {
+  return restQuery(agent, "POST", "/rhc/token/batch", params);
+}
+
+/**
+ * Early-buyer quality for several RHC tokens in one call. **Max 20 addresses**, not
+ * the Solana batch cap of 50 — each token is a per-token cohort computation, not a
+ * set-based lookup. A token that fails to score degrades to an error entry rather
+ * than failing the batch (BASIC+). POST /rhc/tokens/batch/buyer-quality
+ */
+export async function tokensBatchBuyerQuality(agent: Agent, params: { addresses: string[] }) {
+  return restQuery(agent, "POST", "/rhc/tokens/batch/buyer-quality", params);
+}
+
 // ── Deployer hunter ──
 
-/** Deployer reputation leaderboard ($40K graduation / $100K runner milestones) (BASIC+). GET /rhc/deployer-hunter/leaderboard */
+/**
+ * Deployer reputation leaderboard ($40K graduation / $100K runner milestones) (BASIC+).
+ * NOTE: `tier` rides `runner_rate` (the $100K bar) and requires deploy history since
+ * migration 267 — `graduation_rate` is still returned but no longer sets the tier.
+ * GET /rhc/deployer-hunter/leaderboard
+ */
 export async function deployerLeaderboard(
   agent: Agent,
   params: {
@@ -199,6 +274,112 @@ export async function deployerLeaderboard(
 /** Single deployer profile — 200 with is_deployer:false for unknown wallets (BASIC+). GET /rhc/deployer-hunter/{address} */
 export async function deployerProfile(agent: Agent, params: { address: string }) {
   return restQuery(agent, "GET", `/rhc/deployer-hunter/${encodeURIComponent(params.address)}`);
+}
+
+/**
+ * Is this deployer getting better or worse? Streaks, a 10-token rolling success rate,
+ * trend, deploy cadence and recovery speed. The per-token success event is the $40K
+ * peak-MC GRADUATION (RHC launchpads are direct-to-DEX — there is no bonding curve);
+ * `success_metric` states that explicitly (BASIC+).
+ * GET /rhc/deployer-hunter/{address}/trajectory
+ */
+export async function deployerTrajectory(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "GET", `/rhc/deployer-hunter/${encodeURIComponent(params.address)}/trajectory`);
+}
+
+/**
+ * Paginated launch history for one deployer, enriched with live + peak MC (BASIC+).
+ * `sort=peak_mc_usd` re-orders the fetched PAGE only (echoed as sort_scope:"page") —
+ * it is not a global top-tokens ranking. GET /rhc/deployer-hunter/{address}/tokens
+ */
+export async function deployerTokens(
+  agent: Agent,
+  params: { address: string; limit?: number; offset?: number; sort?: "first_seen_at" | "peak_mc_usd" },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/deployer-hunter/${encodeURIComponent(address)}/tokens`, rest);
+}
+
+/**
+ * Full token-deploy history for one deployer plus their reputation row (PRO+ — the
+ * point-in-time profile stays BASIC). RHC has no per-day reputation snapshots, so this
+ * is a deploy history, not a daily tier time-series.
+ * GET /rhc/deployer-hunter/{address}/history
+ */
+export async function deployerHistory(
+  agent: Agent,
+  params: { address: string; limit?: number; offset?: number },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/deployer-hunter/${encodeURIComponent(address)}/history`, rest);
+}
+
+/**
+ * The highest-peaking tokens launched by REPUTABLE (elite/good) deployers in a window —
+ * "what did the deployers worth tracking actually produce" (BASIC+).
+ * GET /rhc/deployer-hunter/best-tokens
+ */
+export async function deployerBestTokens(
+  agent: Agent,
+  params: { period?: "24h" | "7d" | "30d" | "all"; limit?: number } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/deployer-hunter/best-tokens", params);
+}
+
+/**
+ * Chain-wide deployer reputation summary — population per tier, spam token share, alert
+ * volume, and `tier_rules`, the thresholds actually in force: elite/good ride
+ * `runner_rate` ($100K peak MC) since migration 267; `spammer` keys off
+ * `graduation_rate` ($40K) (BASIC+). GET /rhc/deployer-hunter/stats
+ */
+export async function deployerStats(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/deployer-hunter/stats");
+}
+
+/**
+ * Deployer signal feed — new_deploy / graduated events, newest first (BASIC+; ULTRA gets
+ * the full limit, BASIC/PRO share a 50-alert cap).
+ *
+ * A tradability filter (`liquidity_usd >= $100`) runs BY DEFAULT — pass
+ * `include_untradeable: true` for the raw tape. `tier` is resolved at READ time from the
+ * live reputation table, with `tier_at_alert` / `tier_is_stale` exposing snapshot drift.
+ * GET /rhc/deployer-hunter/alerts
+ */
+export async function deployerAlerts(
+  agent: Agent,
+  params: {
+    deployer_tier?: "elite" | "good" | "neutral" | "spammer";
+    priority?: "high" | "medium";
+    alert_type?: "new_deploy" | "graduated";
+    launchpad?: string;
+    min_mc?: number;
+    limit?: number;
+    offset?: number;
+    /** Poll forward — only alerts strictly newer than this ISO timestamp. */
+    since?: string;
+    /** Page back — only alerts strictly older than this ISO timestamp. */
+    before?: string;
+    /** Disables the default liquidity gate. */
+    include_untradeable?: boolean;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/deployer-hunter/alerts", params);
+}
+
+/**
+ * Recent graduations, newest peak first. On RHC a graduation is the $40K peak-MC
+ * milestone (no bonding curve), so the set is defined purely by peak MC; `min_peak` only
+ * raises that floor (BASIC+). GET /rhc/deployer-hunter/recent-bonds
+ */
+export async function recentBonds(
+  agent: Agent,
+  params: {
+    deployer_tier?: "elite" | "good" | "neutral" | "spammer";
+    min_peak?: number;
+    limit?: number;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/deployer-hunter/recent-bonds", params);
 }
 
 // ── Alpha wallets ──

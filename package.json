@@ -1,6 +1,6 @@
 {
   "name": "solana-agent-kit-plugin-robinhood-chain",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Robinhood Chain (chain id 4663) toolset for Solana Agent Kit — EVM-native KOL trades, token discovery & bundle detection, deployer reputation, and the DEX trade tape, packaged as a SAK plugin for agent builders",
   "type": "module",
   "main": "dist/index.js",
