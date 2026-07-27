@@ -146,8 +146,9 @@ Robinhood Chain is an Arbitrum Orbit L2 (chain id 4663). Two things follow, and 
 | BASIC (free) | $0 | 200 |
 | PRO | €43/mo (€430/yr) ≈ $49 | 10,000 |
 | ULTRA | €131/mo (€1310/yr) ≈ $149 | 100,000 |
+| BUSINESS | €400/mo (€4000/yr) ≈ $449 | 500,000 |
 
-Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tools work with any valid key; `trades`, `tokens`, `tokenCandles`, `tokenKolConsensus`, `deployerHistory`, and `alphaWallets` require PRO+. ULTRA unlocks the deepest fields (full bundle cohort with wallet identity, KOL-consensus `buyers`/`exited` lists, `first_kol.evm_address` on `kolFirstTouches`, and the full 500-alert page on `deployerAlerts` — BASIC/PRO cap at 50). Get a key at [madeonsol.com/pricing](https://madeonsol.com/pricing) · pricing at [madeonsol.com/pricing](https://madeonsol.com/pricing).
+Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tools work with any valid key; `trades`, `tokens`, `tokenCandles`, `tokenKolConsensus`, `deployerHistory`, and `alphaWallets` require PRO+. ULTRA unlocks the deepest fields (full bundle cohort with wallet identity, KOL-consensus `buyers`/`exited` lists, `first_kol.evm_address` on `kolFirstTouches`, and the full 500-alert page on `deployerAlerts` — BASIC/PRO cap at 50). Get a key at [madeonsol.com/pricing](https://madeonsol.com/pricing).
 
 ## Also Available
 
@@ -163,8 +164,7 @@ Robinhood Chain coverage is bundled into every tier at no extra cost. BASIC tool
 
 - **Robinhood Chain product** → https://madeonsol.com/robinhood
 - **API docs** → https://madeonsol.com/api-docs
-- **Free API key** → https://madeonsol.com/pricing
-- **Pricing** → https://madeonsol.com/pricing
+- **Pricing & free API key** → https://madeonsol.com/pricing
 
 ## License
 
