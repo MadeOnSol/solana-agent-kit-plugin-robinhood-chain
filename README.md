@@ -15,8 +15,6 @@
 
 > Robinhood Chain intelligence, EVM-native: track Solana KOLs' verified RHC wallets (recovered by tracing their Solana→EVM bridge deposits — a dataset unique to MadeOnSol), rank 99k+ RHC deployers by graduation/runner rate, detect same-block launch bundles and score early-buyer cohorts, and read the Uniswap v2/v3/v4 trade tape with the real trader EOA. **Same `msk_` API key, same base URL, bundled into every tier at no extra cost.** Get a free key at [madeonsol.com/pricing](https://madeonsol.com/pricing).
 
-New customers get a **3-day free trial** of Pro or Ultra when you pay by card — full access, nothing charged during the trial, cancel anytime. Start at [madeonsol.com/pricing](https://madeonsol.com/pricing).
-
 ## Quick start (10 seconds)
 
 ```bash
