@@ -226,6 +226,70 @@ export async function tokenBuyerQuality(agent: Agent, params: { address: string 
 }
 
 /** Launch-bundle detection (same_block cohort held-%) (BASIC+). GET /rhc/tokens/{address}/bundle */
+/**
+ * Top traders of one RHC token by REALIZED ETH flow (sell − buy) (PRO+).
+ * net_eth is NOT PnL — it ignores a trader's remaining bag, so a holder ranks last.
+ * GET /rhc/tokens/{address}/top-traders
+ */
+export async function tokenTopTraders(
+  agent: Agent,
+  params: { address: string; limit?: number; offset?: number },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/top-traders`, rest);
+}
+
+/**
+ * Net buy/sell flow by mutually-exclusive trader cohort (PRO+).
+ * net_eth = sell − buy, so POSITIVE means that cohort DISTRIBUTED.
+ * GET /rhc/tokens/{address}/flow
+ */
+export async function tokenFlow(
+  agent: Agent,
+  params: { address: string; window?: "1h" | "6h" | "24h" | "7d" },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/flow`, rest);
+}
+
+/**
+ * Peak MC, drawdown and high-water curve (PRO+). Returns BOTH peak_mc_usd_recorded
+ * (what deployer tiering uses; sampled from write batches so it can undercount) and
+ * peak_mc_usd_observed (candle max, always >= recorded).
+ * GET /rhc/tokens/{address}/peak-history
+ */
+export async function tokenPeakHistory(
+  agent: Agent,
+  params: { address: string; window?: "24h" | "7d" | "30d" | "all"; curve?: "true" | "false" },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/peak-history`, rest);
+}
+
+/**
+ * EVM-native risk, computed LIVE on-chain (PRO+). Not the Solana model: EVM has no
+ * mint/freeze authority, so an absent capability flag is the norm and NOT a safety
+ * signal. The load-bearing field is sellability.sellable, simulated at head.
+ * GET /rhc/tokens/{address}/risk
+ */
+export async function tokenRisk(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(params.address)}/risk`);
+}
+
+/**
+ * Exact holders + concentration from ERC-20 Transfer-log replay, reconciled against
+ * on-chain totalSupply() (PRO+). Check `verified` first. Concentration excludes pools
+ * and burns; balance is a uint256 decimal STRING.
+ * GET /rhc/tokens/{address}/holders
+ */
+export async function tokenHolders(
+  agent: Agent,
+  params: { address: string; limit?: number; offset?: number },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/holders`, rest);
+}
+
 export async function tokenBundle(agent: Agent, params: { address: string }) {
   return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(params.address)}/bundle`);
 }
