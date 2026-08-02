@@ -24,6 +24,28 @@ import {
   deployerAlerts,
   recentBonds,
   alphaWallets,
+  copytradeRules,
+  createCopytradeRule,
+  copytradeRule,
+  updateCopytradeRule,
+  deleteCopytradeRule,
+  copytradeSignals,
+  priceAlerts,
+  createPriceAlert,
+  priceAlert,
+  updatePriceAlert,
+  deletePriceAlert,
+  priceAlertEvents,
+  coordinationAlertRules,
+  createCoordinationAlertRule,
+  coordinationAlertRule,
+  updateCoordinationAlertRule,
+  deleteCoordinationAlertRule,
+  firstTouchSubscriptions,
+  createFirstTouchSubscription,
+  firstTouchSubscription,
+  updateFirstTouchSubscription,
+  deleteFirstTouchSubscription,
 } from "./tools/index.js";
 import { kolFeedAction } from "./actions/kolFeed.js";
 import { kolLeaderboardAction } from "./actions/kolLeaderboard.js";
@@ -50,6 +72,12 @@ import { deployerStatsAction } from "./actions/deployerStats.js";
 import { deployerAlertsAction } from "./actions/deployerAlerts.js";
 import { recentBondsAction } from "./actions/recentBonds.js";
 import { alphaWalletsAction } from "./actions/alphaWallets.js";
+import { copytradeRulesAction } from "./actions/copytradeRules.js";
+import { copytradeSignalsAction } from "./actions/copytradeSignals.js";
+import { priceAlertsAction } from "./actions/priceAlerts.js";
+import { priceAlertEventsAction } from "./actions/priceAlertEvents.js";
+import { coordinationAlertsAction } from "./actions/coordinationAlerts.js";
+import { firstTouchSubscriptionsAction } from "./actions/firstTouchSubscriptions.js";
 
 /**
  * Robinhood Chain toolset for Solana Agent Kit.
@@ -87,6 +115,29 @@ const RobinhoodChainPlugin = {
     deployerAlerts,
     recentBonds,
     alphaWallets,
+    // Rule engine — server-side rules that PUSH signals. Data, not execution.
+    copytradeRules,
+    createCopytradeRule,
+    copytradeRule,
+    updateCopytradeRule,
+    deleteCopytradeRule,
+    copytradeSignals,
+    priceAlerts,
+    createPriceAlert,
+    priceAlert,
+    updatePriceAlert,
+    deletePriceAlert,
+    priceAlertEvents,
+    coordinationAlertRules,
+    createCoordinationAlertRule,
+    coordinationAlertRule,
+    updateCoordinationAlertRule,
+    deleteCoordinationAlertRule,
+    firstTouchSubscriptions,
+    createFirstTouchSubscription,
+    firstTouchSubscription,
+    updateFirstTouchSubscription,
+    deleteFirstTouchSubscription,
   },
   actions: [
     kolFeedAction,
@@ -114,6 +165,12 @@ const RobinhoodChainPlugin = {
     deployerAlertsAction,
     recentBondsAction,
     alphaWalletsAction,
+    copytradeRulesAction,
+    copytradeSignalsAction,
+    priceAlertsAction,
+    priceAlertEventsAction,
+    coordinationAlertsAction,
+    firstTouchSubscriptionsAction,
   ],
   initialize(_agent: unknown) {
     // No-op — auth is initialized lazily on the first tool call.
@@ -147,8 +204,31 @@ export {
   deployerAlerts,
   recentBonds,
   alphaWallets,
+  copytradeRules,
+  createCopytradeRule,
+  copytradeRule,
+  updateCopytradeRule,
+  deleteCopytradeRule,
+  copytradeSignals,
+  priceAlerts,
+  createPriceAlert,
+  priceAlert,
+  updatePriceAlert,
+  deletePriceAlert,
+  priceAlertEvents,
+  coordinationAlertRules,
+  createCoordinationAlertRule,
+  coordinationAlertRule,
+  updateCoordinationAlertRule,
+  deleteCoordinationAlertRule,
+  firstTouchSubscriptions,
+  createFirstTouchSubscription,
+  firstTouchSubscription,
+  updateFirstTouchSubscription,
+  deleteFirstTouchSubscription,
   lastRateLimit,
 } from "./tools/index.js";
+export type { RhcFirstTouchFilters } from "./tools/index.js";
 export {
   kolFeedAction,
   kolLeaderboardAction,
@@ -175,4 +255,10 @@ export {
   deployerAlertsAction,
   recentBondsAction,
   alphaWalletsAction,
+  copytradeRulesAction,
+  copytradeSignalsAction,
+  priceAlertsAction,
+  priceAlertEventsAction,
+  coordinationAlertsAction,
+  firstTouchSubscriptionsAction,
 };

@@ -68,14 +68,16 @@ export function initAuth(agent: Agent): void {
 /**
  * Request against `/api/v1{path}` with Bearer auth. `path` starts with `/rhc/...`.
  *
- * GET sends `params` as the query string; POST (the two batch routes) sends the
- * SAME object as a JSON body, so a tool signature reads identically either way.
+ * GET sends `params` as the query string; every other method (the batch POSTs and
+ * the rule-engine POST/PATCH routes) sends the SAME object as a JSON body, so a
+ * tool signature reads identically either way. Values are `unknown` because rule
+ * bodies carry nulls and nested objects that a query string never would.
  */
 async function restQuery(
   agent: Agent,
   method: string,
   path: string,
-  params?: Record<string, string | number | boolean | string[] | undefined>,
+  params?: Record<string, unknown>,
 ): Promise<unknown> {
   initAuth(agent);
   if (!_authHeaders || !_authHeaders.Authorization) {
@@ -470,4 +472,317 @@ export async function alphaWallets(
   } = {},
 ) {
   return restQuery(agent, "GET", "/rhc/alpha-wallets", params);
+}
+
+// ── Rule engine: copy-trade, price alerts, coordination, first touches ──
+//
+// The only WRITE surfaces on Robinhood Chain. They create SERVER-SIDE RULES that
+// deliver signals to a webhook and/or WebSocket — nothing is ever executed
+// on-chain, and a fired copy-trade rule returns a SUGGESTED size, not an order.
+//
+// Every quota here is PER CHAIN: a full set of Solana rules does not consume RHC
+// capacity, and vice versa.
+
+/** List your RHC copy-trade rules (PRO+). GET /rhc/copytrade/subscriptions */
+export async function copytradeRules(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/copytrade/subscriptions");
+}
+
+/**
+ * Create an RHC copy-trade rule (PRO+). Amounts are ETH (`min_trade_eth`,
+ * `sizing_amount`), not SOL, and there is deliberately NO market-cap band on RHC
+ * copy-trade — the producer's event carries no market cap, so a band could only be
+ * a per-event lookup in the hot path of a ~3.3M trades/day chain.
+ *
+ * `webhook_url` is required unless `delivery_mode` is `websocket`. The returned
+ * `webhook_secret` is shown ONCE — store it. POST /rhc/copytrade/subscriptions
+ */
+export async function createCopytradeRule(
+  agent: Agent,
+  params: {
+    name?: string;
+    /** 1-250 EVM addresses; the per-tier cap is enforced server-side. */
+    source_wallets: string[];
+    min_trade_eth?: number;
+    only_action?: "buy" | "sell" | "both";
+    sizing_mode?: "fixed" | "proportional" | "percent_source";
+    sizing_amount: number;
+    delivery_mode?: "webhook" | "websocket" | "both";
+    webhook_url?: string;
+  },
+) {
+  return restQuery(agent, "POST", "/rhc/copytrade/subscriptions", params);
+}
+
+/** One copy-trade rule by numeric id (PRO+). GET /rhc/copytrade/subscriptions/{id} */
+export async function copytradeRule(agent: Agent, params: { id: number }) {
+  return restQuery(agent, "GET", `/rhc/copytrade/subscriptions/${params.id}`);
+}
+
+/**
+ * Update a copy-trade rule (PRO+) — partial, send only what changes. The source
+ * wallet cap is re-checked, so a rule cannot be PATCHed past its tier.
+ * PATCH /rhc/copytrade/subscriptions/{id}
+ */
+export async function updateCopytradeRule(
+  agent: Agent,
+  params: {
+    id: number;
+    name?: string | null;
+    source_wallets?: string[];
+    min_trade_eth?: number;
+    only_action?: "buy" | "sell" | "both";
+    sizing_mode?: "fixed" | "proportional" | "percent_source";
+    sizing_amount?: number;
+    delivery_mode?: "webhook" | "websocket" | "both";
+    webhook_url?: string | null;
+    is_active?: boolean;
+  },
+) {
+  const { id, ...body } = params;
+  return restQuery(agent, "PATCH", `/rhc/copytrade/subscriptions/${id}`, body);
+}
+
+/** Delete a copy-trade rule (PRO+). DELETE /rhc/copytrade/subscriptions/{id} */
+export async function deleteCopytradeRule(agent: Agent, params: { id: number }) {
+  return restQuery(agent, "DELETE", `/rhc/copytrade/subscriptions/${params.id}`);
+}
+
+/**
+ * Fire history for your copy-trade rules — the CATCH-UP path after a missed webhook
+ * or a dropped WS connection, not a live stream. Retained 7 days (PRO+).
+ * GET /rhc/copytrade/signals
+ */
+export async function copytradeSignals(
+  agent: Agent,
+  params: {
+    /** 1-500, default 50. */
+    limit?: number;
+    /** Restrict to one rule you own. */
+    subscription_id?: number;
+    /** ISO 8601 — only signals fired at or after this instant. */
+    since?: string;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/copytrade/signals", params);
+}
+
+/** List your RHC price alerts (PRO+). GET /rhc/price-alerts */
+export async function priceAlerts(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/price-alerts");
+}
+
+/**
+ * Create an RHC price alert (PRO+). Market-cap denominated: the baseline MC is
+ * captured NOW, so the alert is a delta from the moment you set it, and the token
+ * must already be tracked with a market cap or the call 400s.
+ *
+ * LATENCY: RHC alerts are evaluated on a ~15 SECOND POLL of rhc_token_prices, not
+ * a live price loop. Effective latency is that interval plus the token's own
+ * price-update cadence — NOT the sub-second figure the Solana alerts achieve.
+ * Alerts expire 30 days after creation. POST /rhc/price-alerts
+ */
+export async function createPriceAlert(
+  agent: Agent,
+  params: {
+    name?: string;
+    /** EVM token address (0x, 40 hex). */
+    token_address: string;
+    /** Percent drop from the captured baseline MC, 0.01-99.99. */
+    drop_pct: number;
+    /** Optional second leg — percent recovery off the dip low, 0.01-1000. */
+    recovery_pct?: number;
+    delivery_mode?: "webhook" | "websocket" | "both";
+    webhook_url?: string;
+  },
+) {
+  return restQuery(agent, "POST", "/rhc/price-alerts", params);
+}
+
+/** One price alert by numeric id (PRO+). GET /rhc/price-alerts/{id} */
+export async function priceAlert(agent: Agent, params: { id: number }) {
+  return restQuery(agent, "GET", `/rhc/price-alerts/${params.id}`);
+}
+
+/**
+ * Update a price alert (PRO+). `token_address`, `drop_pct` and `recovery_pct` are
+ * IMMUTABLE — changing a threshold would make the alert's recorded events
+ * uninterpretable, so delete and recreate instead. PATCH /rhc/price-alerts/{id}
+ */
+export async function updatePriceAlert(
+  agent: Agent,
+  params: {
+    id: number;
+    name?: string | null;
+    delivery_mode?: "webhook" | "websocket" | "both";
+    webhook_url?: string | null;
+    is_active?: boolean;
+  },
+) {
+  const { id, ...body } = params;
+  return restQuery(agent, "PATCH", `/rhc/price-alerts/${id}`, body);
+}
+
+/** Delete a price alert (PRO+). DELETE /rhc/price-alerts/{id} */
+export async function deletePriceAlert(agent: Agent, params: { id: number }) {
+  return restQuery(agent, "DELETE", `/rhc/price-alerts/${params.id}`);
+}
+
+/**
+ * Dip / recovery fire history for your price alerts — the CATCH-UP path, not a live
+ * stream. Retained 30 days (PRO+). GET /rhc/price-alerts/events
+ */
+export async function priceAlertEvents(
+  agent: Agent,
+  params: {
+    /** 1-500, default 50. */
+    limit?: number;
+    event_type?: "dip" | "recovery";
+    /** ISO 8601 — only events fired at or after this instant. */
+    since?: string;
+    /** Restrict to one alert you own. */
+    alert_id?: number;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/price-alerts/events", params);
+}
+
+/** List your RHC KOL coordination alert rules (PRO+). GET /rhc/kol/coordination/alerts */
+export async function coordinationAlertRules(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/kol/coordination/alerts");
+}
+
+/**
+ * Create a coordination alert rule — fire when min_kols+ distinct tracked KOLs buy
+ * the same RHC token inside window_minutes (PRO+).
+ *
+ * Scoring is the shared v1 scorer, so the number is comparable to Solana, but on
+ * RHC the `quality` component is real (KOL 7-day win rate) while `earliness` is
+ * DEFAULTED — RHC has no early-entry equivalent. Each fired signal records which
+ * components were real in `score_inputs`. POST /rhc/kol/coordination/alerts
+ */
+export async function createCoordinationAlertRule(
+  agent: Agent,
+  params: {
+    name?: string;
+    /** 2-50, default 3. */
+    min_kols?: number;
+    /** 1-60, default 15. */
+    window_minutes?: number;
+    /** 0-100, default 0. */
+    min_score?: number;
+    /** 1-1440 minutes, default 30. */
+    cooldown_min?: number;
+    /** Re-fire inside the cooldown when the score jumps this much. 0-100, default 20. */
+    score_jump_break?: number;
+    min_mc_usd?: number | null;
+    max_mc_usd?: number | null;
+    delivery_mode?: "websocket" | "webhook" | "both";
+    webhook_url?: string;
+  } = {},
+) {
+  return restQuery(agent, "POST", "/rhc/kol/coordination/alerts", params);
+}
+
+/** One coordination alert rule by UUID (PRO+). GET /rhc/kol/coordination/alerts/{id} */
+export async function coordinationAlertRule(agent: Agent, params: { id: string }) {
+  return restQuery(agent, "GET", `/rhc/kol/coordination/alerts/${encodeURIComponent(params.id)}`);
+}
+
+/** Update a coordination alert rule (PRO+). PATCH /rhc/kol/coordination/alerts/{id} */
+export async function updateCoordinationAlertRule(
+  agent: Agent,
+  params: {
+    /** UUID. */
+    id: string;
+    name?: string | null;
+    min_kols?: number;
+    window_minutes?: number;
+    min_score?: number;
+    cooldown_min?: number;
+    score_jump_break?: number;
+    min_mc_usd?: number | null;
+    max_mc_usd?: number | null;
+    delivery_mode?: "websocket" | "webhook" | "both";
+    webhook_url?: string | null;
+    is_active?: boolean;
+  },
+) {
+  const { id, ...body } = params;
+  return restQuery(agent, "PATCH", `/rhc/kol/coordination/alerts/${encodeURIComponent(id)}`, body);
+}
+
+/** Delete a coordination alert rule (PRO+). DELETE /rhc/kol/coordination/alerts/{id} */
+export async function deleteCoordinationAlertRule(agent: Agent, params: { id: string }) {
+  return restQuery(agent, "DELETE", `/rhc/kol/coordination/alerts/${encodeURIComponent(params.id)}`);
+}
+
+/**
+ * RHC first-touch subscription filters. Deliberately narrower than Solana's: RHC has
+ * no scout score, so `min_scout_tier` / `min_n_touches` are NOT offered — a filter
+ * that silently matched nothing would be worse than its absence. Unknown keys are
+ * REJECTED, not ignored.
+ */
+export interface RhcFirstTouchFilters {
+  /** Single KOL EVM address — lowercased on write. */
+  kol?: string;
+  min_first_buy_eth?: number;
+  /** 0-1, from the RHC KOL win-rate view. */
+  min_kol_winrate?: number;
+  strategy?: "scalper" | "day_trader" | "swing" | "inactive" | "unscored";
+  min_mc_usd?: number;
+  max_mc_usd?: number;
+}
+
+/** List your RHC first-touch subscriptions (ULTRA+). GET /rhc/kol/first-touches/subscriptions */
+export async function firstTouchSubscriptions(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/kol/first-touches/subscriptions");
+}
+
+/**
+ * Subscribe to RHC first touches — push when a token gets its FIRST tracked-KOL buy,
+ * the earliest discovery signal on the chain (ULTRA+).
+ * POST /rhc/kol/first-touches/subscriptions
+ */
+export async function createFirstTouchSubscription(
+  agent: Agent,
+  params: {
+    name?: string;
+    filters?: RhcFirstTouchFilters;
+    delivery_mode?: "websocket" | "webhook" | "both";
+    webhook_url?: string;
+  } = {},
+) {
+  return restQuery(agent, "POST", "/rhc/kol/first-touches/subscriptions", params);
+}
+
+/** One first-touch subscription by UUID (ULTRA+). GET /rhc/kol/first-touches/subscriptions/{id} */
+export async function firstTouchSubscription(agent: Agent, params: { id: string }) {
+  return restQuery(agent, "GET", `/rhc/kol/first-touches/subscriptions/${encodeURIComponent(params.id)}`);
+}
+
+/**
+ * Update a first-touch subscription (ULTRA+). `filters` is a WHOLE-OBJECT replace,
+ * not a merge — send the complete filter set you want, otherwise removing a filter
+ * would be impossible to express. PATCH /rhc/kol/first-touches/subscriptions/{id}
+ */
+export async function updateFirstTouchSubscription(
+  agent: Agent,
+  params: {
+    /** UUID. */
+    id: string;
+    name?: string | null;
+    filters?: RhcFirstTouchFilters;
+    delivery_mode?: "websocket" | "webhook" | "both";
+    webhook_url?: string | null;
+    is_active?: boolean;
+  },
+) {
+  const { id, ...body } = params;
+  return restQuery(agent, "PATCH", `/rhc/kol/first-touches/subscriptions/${encodeURIComponent(id)}`, body);
+}
+
+/** Delete a first-touch subscription (ULTRA+). DELETE /rhc/kol/first-touches/subscriptions/{id} */
+export async function deleteFirstTouchSubscription(agent: Agent, params: { id: string }) {
+  return restQuery(agent, "DELETE", `/rhc/kol/first-touches/subscriptions/${encodeURIComponent(params.id)}`);
 }
