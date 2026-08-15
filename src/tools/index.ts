@@ -474,6 +474,148 @@ export async function alphaWallets(
   return restQuery(agent, "GET", "/rhc/alpha-wallets", params);
 }
 
+// ── Wallet intelligence ──
+//
+// The profile / pnl / positions trio shares ONE 90-day snapshot cache server-side,
+// so calling all three on an address costs roughly one computation (`cache_hit`
+// says which call paid for it). Every figure is ETH-denominated. Cost basis is
+// FIFO over the rolling window, so a position opened before the window reads as a
+// sell with no matching buy — `cost_basis_observable_from` discloses that.
+
+/**
+ * Any RHC wallet's 90-day trading profile — ETH FIFO PnL, per-token breakdown,
+ * recent trades and a reputation block (tracked KOL, known deployer + tier,
+ * alpha-ranked, dump-cluster member, early-buyer count). `unattributed_trades`
+ * counts pre-2026-07-18 rows with a NULL trader_eoa: unattributable by design and
+ * excluded from PnL, so a low `analyzed_trades` on an old wallet is a data-window
+ * limit, not inactivity (PRO+). GET /rhc/wallet/{address}
+ */
+export async function wallet(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "GET", `/rhc/wallet/${encodeURIComponent(params.address)}`);
+}
+
+/**
+ * Full FIFO cost-basis PnL over 90 days — realized/unrealized split, daily curve,
+ * closed positions with ROI and hold time, open positions marked to market. Same
+ * FIFO implementation as the Solana PnL endpoint, so the two chains are directly
+ * comparable (PRO+). GET /rhc/wallet/{address}/pnl
+ */
+export async function walletPnl(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "GET", `/rhc/wallet/${encodeURIComponent(params.address)}/pnl`);
+}
+
+/**
+ * Only what the wallet still holds, marked to the current price — the same FIFO
+ * pass as walletPnl without the curve and closed positions. Check
+ * `liquidity_basis`: `v4_virtual_ceiling` means `liquidity_usd` is a bonding-curve
+ * ceiling, NOT withdrawable TVL, so never size an exit against it (PRO+).
+ * GET /rhc/wallet/{address}/positions
+ */
+export async function walletPositions(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "GET", `/rhc/wallet/${encodeURIComponent(params.address)}/positions`);
+}
+
+/**
+ * One wallet's swaps, newest first, keyset-paginated on an opaque `next_before`.
+ * Filters by WALLET — `trades({ token })` filters the global tape by TOKEN, which
+ * is a different index path (PRO+). GET /rhc/wallet/{address}/trades
+ */
+export async function walletTrades(
+  agent: Agent,
+  params: {
+    address: string;
+    limit?: number;
+    before?: string;
+    since?: string;
+    action?: "buy" | "sell";
+    token?: string;
+  },
+) {
+  const { address, ...query } = params;
+  return restQuery(agent, "GET", `/rhc/wallet/${encodeURIComponent(address)}/trades`, query);
+}
+
+// ── Wallet tracker (watchlist) ──
+//
+// Quotas are PER CHAIN: PRO 50 / ULTRA 100 / BUSINESS 500 RHC wallets, independent
+// of the Solana watchlist, so adopting RHC never shrinks an existing Solana list.
+
+/** Your RHC watchlist, with count/limit/remaining (PRO+). GET /rhc/wallet-tracker/watchlist */
+export async function walletTrackerList(agent: Agent) {
+  return restQuery(agent, "GET", "/rhc/wallet-tracker/watchlist");
+}
+
+/**
+ * WRITES — track an RHC wallet. Stored lowercase to match `rhc_trades.trader_eoa`;
+ * a checksummed `0xAbC…` would join to nothing and look permanently silent.
+ * 409 if already tracked, 403 once at the tier cap (PRO+).
+ * POST /rhc/wallet-tracker/watchlist
+ */
+export async function walletTrackerAdd(
+  agent: Agent,
+  params: { wallet_address: string; label?: string },
+) {
+  return restQuery(agent, "POST", "/rhc/wallet-tracker/watchlist", params);
+}
+
+/**
+ * DESTRUCTIVE — untrack an RHC wallet, freeing a quota slot. 404 if it is not on
+ * your list (PRO+). DELETE /rhc/wallet-tracker/watchlist/{address}
+ */
+export async function walletTrackerRemove(agent: Agent, params: { address: string }) {
+  return restQuery(agent, "DELETE", `/rhc/wallet-tracker/watchlist/${encodeURIComponent(params.address)}`);
+}
+
+/**
+ * WRITES — relabel a tracked wallet. `label: null` clears it (accepted here,
+ * unlike on add, where null is rejected) (PRO+).
+ * PATCH /rhc/wallet-tracker/watchlist/{address}
+ */
+export async function walletTrackerRelabel(
+  agent: Agent,
+  params: { address: string; label: string | null },
+) {
+  return restQuery(
+    agent,
+    "PATCH",
+    `/rhc/wallet-tracker/watchlist/${encodeURIComponent(params.address)}`,
+    { label: params.label },
+  );
+}
+
+/**
+ * Merged trade feed across every tracked RHC wallet, each row tagged with its
+ * watchlist label. The cursor (`next_before`) is an opaque keyset matching the
+ * rest of the RHC tree, NOT the Solana tracker's integer epoch. A `wallet` filter
+ * must already be tracked (PRO+). GET /rhc/wallet-tracker/trades
+ */
+export async function walletTrackerTrades(
+  agent: Agent,
+  params?: {
+    limit?: number;
+    before?: string;
+    wallet?: string;
+    action?: "buy" | "sell";
+    token?: string;
+  },
+) {
+  return restQuery(agent, "GET", "/rhc/wallet-tracker/trades", params);
+}
+
+/**
+ * Per-wallet buy/sell/volume rollup across your tracked RHC wallets. Sourced from
+ * `rhc_trades` directly, not a per-subscriber capture log — so a newly tracked
+ * wallet has full history immediately, which the Solana tracker cannot do.
+ * `stats_unavailable: true` means the rollup timed out and the stats are zeroed,
+ * not absent (PRO+). GET /rhc/wallet-tracker/summary
+ */
+export async function walletTrackerSummary(
+  agent: Agent,
+  params?: { period?: string; wallet?: string },
+) {
+  return restQuery(agent, "GET", "/rhc/wallet-tracker/summary", params);
+}
+
 // ── Rule engine: copy-trade, price alerts, coordination, first touches ──
 //
 // The only WRITE surfaces on Robinhood Chain. They create SERVER-SIDE RULES that
