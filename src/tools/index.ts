@@ -187,6 +187,30 @@ export async function trades(
   return restQuery(agent, "GET", "/rhc/trades", params);
 }
 
+/**
+ * Liquidity REMOVALS feed — the rug signal (PRO+). Uniswap v2/v3 Burn + v4
+ * ModifyLiquidity with a negative delta on tracked pools, from our own node.
+ * Removals ONLY: adds are not persisted (`coverage.adds_persisted === false`),
+ * so an empty page means "no removals seen", never "no liquidity activity".
+ * Amounts are raw uint256 STRINGS; v4 rows carry `liquidity` only.
+ * `provider_is_token_deployer` is the classic rug tell. Cursor via
+ * `next_before` (same opaque keyset as trades). Data since 2026-08-05.
+ * GET /rhc/lp-events
+ */
+export async function lpEvents(
+  agent: Agent,
+  params: {
+    limit?: number;
+    token?: string;
+    pool?: string;
+    provider?: string;
+    dex?: "uniswap-v2" | "uniswap-v3" | "uniswap-v4";
+    before?: string;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/lp-events", params);
+}
+
 // ── Tokens ──
 
 /** RHC token discovery, sortable/filterable (PRO+). GET /rhc/tokens */
@@ -201,6 +225,26 @@ export async function tokens(
   } = {},
 ) {
   return restQuery(agent, "GET", "/rhc/tokens", params);
+}
+
+/**
+ * Every official Robinhood tokenized stock / ETF (NVDA, SPY, AAPL…) with live
+ * price / MC / liquidity + 24h trades, ETH volume and buyer-seller split (BASIC+).
+ * Identity is the issuer BEACON (EIP-1967 beacon proxy on 0xe10b6f6b…151b00,
+ * read from our node), never the name — look-alike "GameStop • Robinhood Token"
+ * contracts are excluded by construction. `symbol` = exact ticker
+ * (case-insensitive), `q` = substring of symbol/name. GET /rhc/equities
+ */
+export async function equities(
+  agent: Agent,
+  params: {
+    sort?: "volume" | "trades" | "market_cap" | "last_trade" | "symbol";
+    limit?: number;
+    symbol?: string;
+    q?: string;
+  } = {},
+) {
+  return restQuery(agent, "GET", "/rhc/equities", params);
 }
 
 /** Full snapshot for one RHC token (BASIC+). GET /rhc/tokens/{address} */

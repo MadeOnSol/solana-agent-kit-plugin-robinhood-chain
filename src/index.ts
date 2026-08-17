@@ -6,7 +6,9 @@ import {
   kolCoordination,
   kolFirstTouches,
   trades,
+  lpEvents,
   tokens,
+  equities,
   token,
   tokenBatch,
   tokenCandles,
@@ -64,7 +66,9 @@ import { kolProfileAction } from "./actions/kolProfile.js";
 import { kolCoordinationAction } from "./actions/kolCoordination.js";
 import { kolFirstTouchesAction } from "./actions/kolFirstTouches.js";
 import { tradesAction } from "./actions/trades.js";
+import { lpEventsAction } from "./actions/lpEvents.js";
 import { tokensAction } from "./actions/tokens.js";
+import { equitiesAction } from "./actions/equities.js";
 import { tokenAction } from "./actions/token.js";
 import { tokenBatchAction } from "./actions/tokenBatch.js";
 import { tokenCandlesAction } from "./actions/tokenCandles.js";
@@ -121,7 +125,9 @@ const RobinhoodChainPlugin = {
     kolCoordination,
     kolFirstTouches,
     trades,
+    lpEvents,
     tokens,
+    equities,
     token,
     tokenBatch,
     tokenCandles,
@@ -181,7 +187,9 @@ const RobinhoodChainPlugin = {
     kolCoordinationAction,
     kolFirstTouchesAction,
     tradesAction,
+    lpEventsAction,
     tokensAction,
+    equitiesAction,
     tokenAction,
     tokenBatchAction,
     tokenCandlesAction,
@@ -220,7 +228,9 @@ export {
   kolCoordination,
   kolFirstTouches,
   trades,
+  lpEvents,
   tokens,
+  equities,
   token,
   tokenBatch,
   tokenCandles,
@@ -281,7 +291,9 @@ export {
   kolCoordinationAction,
   kolFirstTouchesAction,
   tradesAction,
+  lpEventsAction,
   tokensAction,
+  equitiesAction,
   tokenAction,
   tokenBatchAction,
   tokenCandlesAction,
