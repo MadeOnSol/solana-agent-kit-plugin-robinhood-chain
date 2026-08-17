@@ -281,7 +281,9 @@ export async function tokenRisk(agent: Agent, params: { address: string }) {
 /**
  * Exact holders + concentration from ERC-20 Transfer-log replay, reconciled against
  * on-chain totalSupply() (PRO+). Check `verified` first. Concentration excludes pools
- * and burns; balance is a uint256 decimal STRING.
+ * and burns; balance is a uint256 decimal STRING. `holder_growth.{1h,24h,7d}` =
+ * entered / entered_still_holding / exited / net (≈ Δ holder_count) per window; a
+ * window is null only when the chain had no ingested trades in it.
  * GET /rhc/tokens/{address}/holders
  */
 export async function tokenHolders(
