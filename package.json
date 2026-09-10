@@ -1,6 +1,6 @@
 {
   "name": "solana-agent-kit-plugin-robinhood-chain",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Robinhood Chain (chain id 4663) toolset for Solana Agent Kit — EVM-native KOL trades, token discovery & bundle detection, deployer reputation, the DEX trade tape, and the RHC rule engine (copy-trade rules, price alerts, coordination alerts, first-touch subscriptions), packaged as a SAK plugin for agent builders",
   "type": "module",
   "main": "dist/index.js",
@@ -14,6 +14,8 @@
     "prebuild": "node ../gen-version.mjs",
     "build": "tsc",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node test/smoke.mjs",
     "preflight": "bash ../../scripts/preflight-publish.sh",
     "prepublishOnly": "npm run preflight && npm run build"
   },
