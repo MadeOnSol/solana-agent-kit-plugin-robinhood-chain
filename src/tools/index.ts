@@ -285,6 +285,15 @@ export async function tokenTopTraders(
   return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/top-traders`, rest);
 }
 
+/** First buyers of a token, ranked, with still-holding status. Added 2026-09-10. */
+export async function tokenEarlyBuyers(
+  agent: Agent,
+  params: { address: string; limit?: number },
+) {
+  const { address, ...rest } = params;
+  return restQuery(agent, "GET", `/rhc/tokens/${encodeURIComponent(address)}/early-buyers`, rest);
+}
+
 /**
  * Net buy/sell flow by mutually-exclusive trader cohort (PRO+).
  * net_eth = sell − buy, so POSITIVE means that cohort DISTRIBUTED.
