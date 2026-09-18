@@ -21,7 +21,12 @@ const BASE_URL = "https://madeonsol.com";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Agent = any; // SolanaAgentKit — `any` to avoid a hard dependency on the peer
 
-let _authHeaders: Record<string, string> | null = null;
+interface AuthContext {
+  apiKey: string | undefined;
+  headers: Record<string, string>;
+}
+
+const authByAgent = new WeakMap<object, AuthContext>();
 
 export interface RateLimitInfo {
   limit?: string;
@@ -46,23 +51,31 @@ function getConfig(agent: Agent, key: string): string | undefined {
   return agent?.config?.[key] || agent?.config?.OTHER_API_KEYS?.[key];
 }
 
-export function initAuth(agent: Agent): void {
-  if (_authHeaders) return;
+function getAuth(agent: Agent): AuthContext {
   const apiKey = getConfig(agent, "ROBINHOOD_CHAIN_API_KEY") || getConfig(agent, "MADEONSOL_API_KEY");
+  const cached = authByAgent.get(agent);
+  if (cached && cached.apiKey === apiKey) return cached;
+
+  const auth: AuthContext = { apiKey, headers: {} };
   if (apiKey) {
-    _authHeaders = {
+    auth.headers = {
       Authorization: `Bearer ${apiKey}`,
       "User-Agent": `solana-agent-kit-plugin-robinhood-chain/${VERSION}`,
     };
     console.log("[robinhood-chain] Using MadeOnSol API key (Bearer auth)");
   } else {
-    _authHeaders = {};
     console.warn(
       "\n[robinhood-chain] No API key configured — every Robinhood Chain call will fail.\n" +
         "  → Get a free `msk_` key (covers Robinhood Chain at no extra cost) at https://madeonsol.com/pricing\n" +
         "  → Set ROBINHOOD_CHAIN_API_KEY (or MADEONSOL_API_KEY) in the agent config.\n",
     );
   }
+  authByAgent.set(agent, auth);
+  return auth;
+}
+
+export function initAuth(agent: Agent): void {
+  getAuth(agent);
 }
 
 /**
@@ -79,8 +92,8 @@ async function restQuery(
   path: string,
   params?: Record<string, unknown>,
 ): Promise<unknown> {
-  initAuth(agent);
-  if (!_authHeaders || !_authHeaders.Authorization) {
+  const auth = getAuth(agent);
+  if (!auth.headers.Authorization) {
     throw new Error(
       "MadeOnSol API key required for Robinhood Chain. Get a free `msk_` key at https://madeonsol.com/pricing",
     );
@@ -94,7 +107,7 @@ async function restQuery(
   }
   const res = await fetch(url.toString(), {
     method,
-    headers: isWrite ? { ..._authHeaders, "Content-Type": "application/json" } : _authHeaders,
+    headers: isWrite ? { ...auth.headers, "Content-Type": "application/json" } : auth.headers,
     ...(isWrite ? { body: JSON.stringify(params ?? {}) } : {}),
   });
   captureRateLimit(res);
