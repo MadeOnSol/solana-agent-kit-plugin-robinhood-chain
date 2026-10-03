@@ -49,7 +49,7 @@ const feed = await agent.methods.kolFeed(agent, { limit: 5, action: "buy" });
 
 ## Authentication
 
-This toolset is **key-mode only** — a single MadeOnSol API key (`msk_`, Bearer). Robinhood Chain does have a keyless x402 pay-per-call rail (a narrow 6-endpoint subset, dual-accept USDG-on-RHC or USDC-on-Solana — see [madeonsol.com/robinhood/x402](https://madeonsol.com/robinhood/x402)), but it is **not** wired into this plugin.
+This toolset is **key-mode only** — a single MadeOnSol API key (`msk_`, Bearer). Robinhood Chain does have a keyless x402 pay-per-call rail (a narrow keyless subset, listed live at `/api/x402/rhc`, dual-accept USDG-on-RHC or USDC-on-Solana — see [madeonsol.com/robinhood/x402](https://madeonsol.com/robinhood/x402)), but it is **not** wired into this plugin.
 
 | Config key | Notes |
 |---|---|
@@ -206,7 +206,9 @@ const rule = await agent.methods.createCopytradeRule(agent, {
   webhook_url: "https://your-app.example/rhc-copytrade",
 });
 // rule.webhook_secret is shown ONCE — store it. Payloads are signed
-// HMAC-SHA256 over `<timestamp>.<body>` in X-MadeOnSol-Signature.
+// Lowercase hex HMAC-SHA256 (no prefix) over `<timestamp>.<rawBody>` in
+// X-MadeOnSol-Signature; <timestamp> = X-MadeOnSol-Timestamp, unix MILLISECONDS;
+// key = the webhook_secret string exactly as returned (do not hex-decode it).
 
 // Catch-up after a missed webhook (7-day retention)
 const signals = await agent.methods.copytradeSignals(agent, { subscription_id: rule.subscription.id });
